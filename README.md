@@ -1,7 +1,7 @@
 # Monitor
 
 This is an utility, which provides information about your server's health. 
-To use this utility, you need to register it in your client area. To do this, open server (add it, if server is not created), then go to "Monitors" tab and create one by clicking "+" button
+To use it, you need to register new Monitor in your client area. To do this, open server, on which you want to configure system resource checks (add it, if server is not created), then go to "Monitors" tab and create a new one by clicking "+" button
 
 ## Compiling
 The best way to compile executable jar-file is Maven:
