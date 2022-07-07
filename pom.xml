@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>net.ismeup</groupId>
-    <artifactId>ServerMonitor</artifactId>
+    <artifactId>Monitor</artifactId>
     <version>1.0</version>
 
     <properties>
