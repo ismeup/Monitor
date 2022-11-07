@@ -1,6 +1,5 @@
 package net.ismeup.monitor.controller;
 
-import net.ismeup.monitor.Monitor;
 import net.ismeup.monitor.model.Configuration;
 import net.ismeup.monitor.exceptions.CantParseException;
 import net.ismeup.monitor.model.LoadAverageType;

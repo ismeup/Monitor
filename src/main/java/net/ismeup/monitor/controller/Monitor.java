@@ -1,4 +1,4 @@
-package net.ismeup.monitor;
+package net.ismeup.monitor.controller;
 
 import net.ismeup.monitor.model.LoadAverageType;
 import oshi.SystemInfo;

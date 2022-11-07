@@ -4,7 +4,6 @@ import net.ismeup.monitor.Main;
 import net.ismeup.monitor.exceptions.CantParseConfigFile;
 import net.ismeup.monitor.exceptions.CantReadConfigFile;
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -22,16 +21,29 @@ public class Configuration {
     private String bind;
     private Map<String, String> disks;
 
-    public Configuration() throws CantParseConfigFile, FileNotFoundException, CantReadConfigFile {
-        readConfigurationFile();
+    public static Configuration empty() {
+        Configuration configuration = new Configuration();
+        configuration.key = "";
+        configuration.port = 0;
+        configuration.bind = "";
+        configuration.disks = new HashMap<>();
+        return configuration;
+    }
+
+    public static Configuration fromConfig() throws CantParseConfigFile, FileNotFoundException, CantReadConfigFile {
+        Configuration configuration = new Configuration();
+        configuration.readConfigurationFile();
+        return configuration;
+    }
+
+    private Configuration() {
+        //readConfigurationFile();
     }
 
     private void readConfigurationFile() throws FileNotFoundException, CantReadConfigFile, CantParseConfigFile {
         try {
-            String fileName = "config.json";
-            File jarFile = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath());
-            String inputFilePath = jarFile.getParent() + File.separator + fileName;
-            FileInputStream inStream = new FileInputStream(new File(inputFilePath));
+            String inputFilePath = configFilePath();
+            FileInputStream inStream = new FileInputStream(inputFilePath);
             int size = inStream.available();
             byte[] data = new byte[size];
             inStream.read(data);
@@ -44,6 +56,13 @@ public class Configuration {
         } catch (IOException e) {
             throw new CantReadConfigFile();
         }
+    }
+
+    public String configFilePath() throws URISyntaxException {
+        String fileName = "config.json";
+        File jarFile = new File(Main.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath());
+        String inputFilePath = jarFile.getParent() + File.separator + fileName;
+        return inputFilePath;
     }
 
     private void parseConfiguration(String configurationFile) throws CantParseConfigFile {
@@ -70,6 +89,20 @@ public class Configuration {
         }
     }
 
+    public JSONObject getJson() {
+        JSONObject jsonObject = new JSONObject();
+        JSONArray disksArray = new JSONArray();
+        disks.forEach( (disk, mountPoint) -> {
+            disksArray.put(new JSONObject().put("name", disk).put("path", mountPoint));
+        } );
+        jsonObject.put("key", key);
+        jsonObject.put("bind", bind);
+        jsonObject.put("port", port);
+        jsonObject.put("mount_points", disksArray);
+
+        return jsonObject;
+    }
+
     public String getKey() {
         return key;
     }
@@ -88,5 +121,21 @@ public class Configuration {
 
     public String getMountPointByName(String disk) {
         return disks.get(disk);
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public void setBind(String bind) {
+        this.bind = bind;
+    }
+
+    public void setDisks(Map<String, String> disks) {
+        this.disks = disks;
     }
 }
