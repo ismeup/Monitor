@@ -25,50 +25,27 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class RegistrationController {
-
     private final int defaultPort = 5555;
-
     private CmdLineInput cmdLineInput;
     private ApiConnector apiConnector;
+    private UserSettings userSettings;
 
     public void start(String[] arguments) {
         init(arguments);
         LoginData loginData = cmdLineInput.authenticate("Monitor", 3600);
         try {
             if (apiConnector.authenticate(loginData)) {
-                System.out.println("Logged in");
-                Server server = selectServer();
-                System.out.println("Selected server: " + server.getName() + " (" + server.getHost() + ")");
-                List<SystemMonitor> monitors = loadMonitors(server);
-                SystemMonitor systemMonitor = null;
-                if (monitors.size() > 0) {
-                    systemMonitor = selectMonitor(monitors);
-                } else {
-                    System.out.println("There is no added Monitors, so we will create new one");
-                    systemMonitor = SystemMonitor.empty();
-                }
-                if (systemMonitor.getId() == 0) {
-                    systemMonitor.setName("");
-                }
-                UserSettings userSettings = new UserSettings(systemMonitor, server);
-                try {
-                    Configuration configuration = Configuration.fromConfig();
-                    userSettings.parseConfiguration(configuration);
-                    System.out.println("Found existing configuration");
-                } catch (CantParseConfigFile e) {
-
-                } catch (FileNotFoundException e) {
-
-                } catch (CantReadConfigFile e) {
-
-                }
+                initUserSettings();
                 boolean connectionIsTested = false;
                 while (!connectionIsTested) {
-                    startRequestingData(userSettings);
-                    connectionIsTested = testConnection(userSettings);
+                    requestUserData();
+                    connectionIsTested = testConnection();
                 }
-                saveMonitorOnServer(userSettings);
-                saveConfigurationFile(userSettings);
+                boolean save = cmdLineInput.requestYesNo("We are ready to save Monitor settings to server and to config.json. Proceed?", true);
+                if (save) {
+                    saveMonitorOnServer();
+                    saveConfigurationFile();
+                }
             } else {
                 System.out.println("Login or password mismatch. Try again");
             }
@@ -77,7 +54,49 @@ public class RegistrationController {
         }
     }
 
-    private void saveMonitorOnServer(UserSettings userSettings) {
+    private void init(String[] arguments) {
+        this.cmdLineInput = new CmdLineInput();
+        ApiConnectionData apiConnectionData = ApiConnectionData.defaultUrl();
+        if (arguments.length > 1) {
+            try {
+                apiConnectionData = ApiConnectionData.parse(arguments[1]);
+            } catch (MalformedURLException e) {
+                System.out.println("Can't parse registration URL");
+            }
+        }
+        apiConnector = new ApiConnector(apiConnectionData, new OneTimeTokenStorage());
+    }
+
+    private void initUserSettings() {
+        System.out.println("Logged in");
+        Server server = selectServer();
+        System.out.println("Selected server: " + server.getName() + " (" + server.getHost() + ")");
+        List<SystemMonitor> monitors = loadMonitors(server);
+        SystemMonitor systemMonitor = null;
+        if (monitors.size() > 0) {
+            systemMonitor = selectMonitor(monitors);
+        } else {
+            System.out.println("There is no added Monitors, so we will create new one");
+            systemMonitor = SystemMonitor.empty();
+        }
+        if (systemMonitor.getId() == 0) {
+            systemMonitor.setName("");
+        }
+        userSettings = new UserSettings(systemMonitor, server);
+        try {
+            Configuration configuration = Configuration.fromConfig();
+            userSettings.parseConfiguration(configuration);
+            System.out.println("config.json is found. Reading values");
+        } catch (CantParseConfigFile e) {
+
+        } catch (FileNotFoundException e) {
+
+        } catch (CantReadConfigFile e) {
+
+        }
+    }
+
+    private void saveMonitorOnServer() {
         ApiResult apiResult = apiConnector.postOperation(
                 "system_monitor",
                 "save_monitor",
@@ -90,7 +109,7 @@ public class RegistrationController {
         }
     }
 
-    private void saveConfigurationFile(UserSettings userSettings) {
+    private void saveConfigurationFile() {
         try {
             FileOutputStream fileOutputStream = new FileOutputStream(userSettings.getConfiguration().configFilePath());
             fileOutputStream.write(userSettings.getConfiguration().getJson().toString().getBytes());
@@ -107,7 +126,7 @@ public class RegistrationController {
         }
     }
 
-    private boolean testConnection(UserSettings userSettings) {
+    private boolean testConnection() {
         boolean result = false;
         boolean wantToTest = cmdLineInput.requestYesNo("Do you want to test this Monitor?", true);
         if (wantToTest) {
@@ -166,6 +185,9 @@ public class RegistrationController {
                     testPassed = testResult.isOk();
                 }
                 if (testPassed) {
+                    System.out.println();
+                    System.out.println("Test complete!");
+                    System.out.println();
                     result = true;
                 } else {
                     System.out.println("Test failed!");
@@ -179,37 +201,51 @@ public class RegistrationController {
         return result;
     }
 
-    private void startRequestingData(UserSettings userSettings) {
+    private void requestUserData() {
         boolean yes = false;
         while (!yes) {
+            System.out.println();
+            System.out.println("Step #1: Set name for this Monitor");
+            System.out.println("* This name will be displayed in your Client Area");
             userSettings.setName(cmdLineInput.requestString("Enter name", userSettings.getName().isEmpty() ? null : userSettings.getName()));
-            getBindInterface(userSettings);
+            System.out.println();
+            System.out.println("Step #2: Select where you will bind that monitor");
+            System.out.println("* Note, that if you will select 127.0.0.1, you will not be able to connect to this Monitor without Watcher");
+            getBindInterface();
+            System.out.println();
+            System.out.println("Step #3: Select port for this Monitor");
+            System.out.println("* Note, that ports less than 1024 may require root privileges, so use port > 1024, if you can");
             userSettings.setPort(cmdLineInput.requestInt("Enter port (1 - 65535) ", userSettings.getPort() == 0 ? defaultPort : userSettings.getPort()));
             while (userSettings.getPort() < 1 || userSettings.getPort() > 65535) {
                 userSettings.setPort(cmdLineInput.requestInt("Enter port", userSettings.getPort() == 0 ? defaultPort : userSettings.getPort()));
             }
-            setRemoteIp(userSettings);
-            userSettings.setKey(cmdLineInput.requestString("Enter AES key", userSettings.getKey().isEmpty() ? null : userSettings.getKey()));
-            printDisks(userSettings);
-            printSummary(userSettings);
+            System.out.println();
+            System.out.println("Step #4: How we can reach this Monitor");
+            System.out.println("* Note, that if you doesn't have a real IP, or you are using 127.0.0.1, you need to configure Watcher first and provide here IP, that is reachable by Watcher");
+            setRemoteIp();
+
+            System.out.println();
+            System.out.println("Step #5: Enter passphrase for that Monitor");
+            System.out.println("* Note, that we need to encrypt data, that your server will send us. To do it, we are using AES encryption and let you to set passphrase for it");
+            boolean keyIsGood = false;
+            while (!keyIsGood) {
+                userSettings.setKey(cmdLineInput.requestString("Enter AES key", userSettings.getKey().isEmpty() ? UUID.randomUUID().toString() : userSettings.getKey()));
+                keyIsGood = userSettings.getKey().length() > 8;
+                if (!keyIsGood) {
+                    System.out.println("Key length can not be less than 8 symbols");
+                }
+            }
+
+            System.out.println();
+            System.out.println("Step #6: Disk space monitoring");
+            System.out.println("* Add disks, if you want to be informed by isMeUp about your disks free space ending");
+            printDisks();
+            printSummary();
             yes = cmdLineInput.requestYesNo("Is above data right?", true);
         }
     }
 
-    private void init(String[] arguments) {
-        this.cmdLineInput = new CmdLineInput();
-        ApiConnectionData apiConnectionData = ApiConnectionData.defaultUrl();
-        if (arguments.length > 1) {
-            try {
-                apiConnectionData = ApiConnectionData.parse(arguments[1]);
-            } catch (MalformedURLException e) {
-                System.out.println("Can't parse registration URL");
-            }
-        }
-        apiConnector = new ApiConnector(apiConnectionData, new OneTimeTokenStorage());
-    }
-
-    private void printSummary(UserSettings userSettings) {
+    private void printSummary() {
         System.out.println();
         System.out.println("====== Summary ======");
         System.out.println();
@@ -223,10 +259,14 @@ public class RegistrationController {
         System.out.println("Bind port: " + userSettings.getPort());
         System.out.println("Bind address: " + userSettings.getBindTo());
         System.out.println("AES Encryption key: " + userSettings.getKey());
-        System.out.println("Disks:");
-        userSettings.getMountPoints().keySet().forEach( e -> {
-            System.out.println("    " + e + " : " + userSettings.getMountPoints().get(e));
-        } );
+        if (userSettings.getMountPoints().size() > 0) {
+            System.out.println("Disks:");
+            userSettings.getMountPoints().keySet().forEach(e -> {
+                System.out.println("    " + e + " : " + userSettings.getMountPoints().get(e));
+            });
+        } else {
+            System.out.println("Disks not registered");
+        }
         System.out.println();
         System.out.println("====== Configuration file (config.json) ======");
         System.out.println();
@@ -251,7 +291,7 @@ public class RegistrationController {
         return server;
     }
 
-    private void getBindInterface(UserSettings userSettings) {
+    private void getBindInterface() {
         BindInterface selectedBindInterface = null;
         try {
             Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
@@ -279,7 +319,7 @@ public class RegistrationController {
             }
             bindInterfaces.sort(Comparator.comparing(BindInterface::getName));
             BindInterface defaultBindInterface = userSettings.getBindTo() == null ? new BindInterface("0.0.0.0") : new BindInterface(userSettings.getBindTo());
-            selectedBindInterface = (BindInterface) cmdLineInput.requestSelectable("Where bind to?", bindInterfaces, defaultBindInterface);
+            selectedBindInterface = (BindInterface) cmdLineInput.requestSelectable("Where to bind to?", bindInterfaces, defaultBindInterface);
             userSettings.setBindTo(selectedBindInterface.getName());
         } catch (SocketException e) {
 
@@ -308,7 +348,7 @@ public class RegistrationController {
         return monitor;
     }
 
-    private void setRemoteIp(UserSettings userSettings) {
+    private void setRemoteIp() {
         String defaultIpAddress = userSettings.getRemoteAddress();
         if (defaultIpAddress == null || defaultIpAddress.isEmpty()) {
             ApiResult apiResult = apiConnector.postOperation("remote_address", "get_ip");
@@ -317,7 +357,7 @@ public class RegistrationController {
         userSettings.setRemoteAddress(cmdLineInput.requestString("Remote IP address", defaultIpAddress.isEmpty() ? null : defaultIpAddress));
     }
 
-    private void printDisks(UserSettings userSettings) {
+    private void printDisks() {
         System.out.println("Configured disks:");
         String operation = "";
         while (!operation.equals("c")) {
@@ -337,22 +377,22 @@ public class RegistrationController {
             operation = cmdLineInput.requestString("Select operation", "c");
             switch (operation) {
                 case "a":
-                    addDisk(userSettings);
+                    addDisk();
                     break;
                 case "m":
-                    editDisk(userSettings);
+                    editDisk();
                     break;
                 case "r":
-                    removeDisk(userSettings);
+                    removeDisk();
                     break;
                 case "s":
-                    scanDisks(userSettings);
+                    scanDisks();
                     break;
             }
         }
     }
 
-    private void addDisk(UserSettings userSettings) {
+    private void addDisk() {
         long freeSpace = 0;
         String diskPath = null;
         while (freeSpace == 0) {
@@ -380,7 +420,7 @@ public class RegistrationController {
         return defaultName;
     }
 
-    private void removeDisk(UserSettings userSettings) {
+    private void removeDisk() {
             int value = -1;
             while (value == -1) {
                 String diskNumberString = cmdLineInput.requestString("Enter disk number to remove or [c] to cancel");
@@ -407,7 +447,7 @@ public class RegistrationController {
 
     }
 
-    private void editDisk(UserSettings userSettings) {
+    private void editDisk() {
         int value = -1;
         while (value == -1) {
             String diskNumberString = cmdLineInput.requestString("Enter disk number to edit or [c] to cancel");
@@ -446,7 +486,7 @@ public class RegistrationController {
         }
     }
 
-    private void scanDisks(UserSettings userSettings) {
+    private void scanDisks() {
         try {
             FileInputStream fileInputStream = new FileInputStream("/etc/fstab");
             int size = fileInputStream.available();
