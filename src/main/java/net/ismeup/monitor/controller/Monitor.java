@@ -45,9 +45,8 @@ public class Monitor {
     public int getDiskFreeSpace(String path) {
         File file = new File(path);
         long totalRootBytes = file.getTotalSpace();
-        long freeRootBytes = file.getFreeSpace();
-        long usedRootBytes = totalRootBytes - freeRootBytes;
-        int rootPercentUsed = (int) ( 100d / ( (double) totalRootBytes / (double) usedRootBytes ) );
-        return rootPercentUsed;
+        long freeRootBytes = file.getUsableSpace();
+        double rootPercentUsed = 100d - 100d / ( (double) totalRootBytes / (double) freeRootBytes );
+        return (int) Math.round(rootPercentUsed);
     }
 }
