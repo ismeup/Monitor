@@ -29,7 +29,7 @@
         <dependency>
             <groupId>com.github.r0ck3r</groupId>
             <artifactId>SimpleHttpServer</artifactId>
-            <version>b3f2755</version>
+            <version>1aebb01</version>
         </dependency>
         <dependency>
             <groupId>com.github.oshi</groupId>
