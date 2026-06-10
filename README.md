@@ -1,6 +1,6 @@
 # Monitor
 
-This is an utility, which provides information about your server's health. 
+This is a utility which provides information about your server's health. 
 To use it, you need to register new Monitor in your client area and provide config.json file
 (look for Configuring and running section).
 
@@ -30,7 +30,7 @@ Then, you will be able to run Monitor as usual:
 ### Manual configuration
 
 In manual mode, you need to register your Monitor in your Client Area. 
-You can do this by next steps:
+You can do this with the following steps:
 
 1) Open server, on which you want to configure system resource checks (add it, if server is not created)
 2) Open "Monitors" tab and create a new one by clicking "+" button

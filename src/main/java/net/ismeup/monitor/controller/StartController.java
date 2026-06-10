@@ -25,14 +25,14 @@ public class StartController {
             System.exit(1);
         } catch (ServerBindException e) {
             System.out.println("Can't bind server to " + e.getBindTo() + ":" + e.getPort());
-            System.out.println("Possible wrong configuration");
+            System.out.println("Possibly wrong configuration");
             System.exit(1);
         } catch (SslInitException e) {
             //We are not using SSL
         } catch (CantParseConfigFile e) {
-            System.out.println("Can't parse configuration file. Possible wrong configuration");
+            System.out.println("Can't parse configuration file. Possibly wrong configuration");
         } catch (FileNotFoundException e) {
-            System.out.println("config.json is not found");
+            System.out.println("File config.json is not found. If you want to configure this monitor in standalone mode, pass the --config option");
         } catch (CantReadConfigFile e) {
             System.out.println("Can't read configuration file");
         }

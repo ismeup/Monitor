@@ -8,8 +8,8 @@ public class Server implements CmdSelectable {
     private String name;
     private String host;
     private ServerOwnType type;
-    private double balance;
-    private ServerWatcher defaultServerWatcher;
+    private ServerAgent defaultServerAgent;
+    private boolean isCategory;
 
     public static Server empty() {
         Server server = new Server();
@@ -17,8 +17,8 @@ public class Server implements CmdSelectable {
         server.name = "";
         server.host = "";
         server.type = ServerOwnType.VIEWER;
-        server.balance = .0;
-        server.defaultServerWatcher = ServerWatcher.empty();
+        server.defaultServerAgent = ServerAgent.empty();
+        server.isCategory = false;
         return server;
     }
 
@@ -43,12 +43,12 @@ public class Server implements CmdSelectable {
         return type;
     }
 
-    public double getBalance() {
-        return balance;
+    public ServerAgent getDefaultServerAgent() {
+        return defaultServerAgent;
     }
 
-    public ServerWatcher getDefaultServerWatcher() {
-        return defaultServerWatcher;
+    public boolean isCategory() {
+        return isCategory;
     }
 
     public JSONObject toJson() {
@@ -58,8 +58,8 @@ public class Server implements CmdSelectable {
                 .put("name", name)
                 .put("host", host)
                 .put("type", ServerOwnType.fromEnum(type))
-                .put("balance", balance)
-                .put("defaultServerWatcher", defaultServerWatcher.toJson())
+                .put("defaultServerWatcher", defaultServerAgent.toJson())
+                .put("isCategory", isCategory)
                 ;
         return jsonObject;
     }
@@ -70,8 +70,8 @@ public class Server implements CmdSelectable {
         server.name = jsonObject.optString("name", "");
         server.host = jsonObject.optString("host", "");
         server.type = ServerOwnType.fromInt(jsonObject.optInt("type", 0));
-        server.balance = jsonObject.optDouble("balance", .0);
-        server.defaultServerWatcher = ServerWatcher.fromJson(jsonObject.optJSONObject("defaultServerWatcher", new JSONObject()));
+        server.defaultServerAgent = ServerAgent.fromJson(jsonObject.optJSONObject("defaultServerWatcher", new JSONObject()));
+        server.isCategory = jsonObject.optBoolean("isCategory", false);
         return server;
     }
 }

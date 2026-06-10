@@ -47,7 +47,7 @@ public class RegistrationController {
                     saveConfigurationFile();
                 }
             } else {
-                System.out.println("Login or password mismatch. Try again");
+                System.out.println("Incorrect login or password. Try again");
             }
         } catch (ConnectionFailException e) {
 
@@ -73,10 +73,10 @@ public class RegistrationController {
         System.out.println("Selected server: " + server.getName() + " (" + server.getHost() + ")");
         List<SystemMonitor> monitors = loadMonitors(server);
         SystemMonitor systemMonitor = null;
-        if (monitors.size() > 0) {
+        if (!monitors.isEmpty()) {
             systemMonitor = selectMonitor(monitors);
         } else {
-            System.out.println("There is no added Monitors, so we will create new one");
+            System.out.println("There are no Monitors added, so we will create a new one");
             systemMonitor = SystemMonitor.empty();
         }
         if (systemMonitor.getId() == 0) {
@@ -130,22 +130,22 @@ public class RegistrationController {
         boolean result = false;
         boolean wantToTest = cmdLineInput.requestYesNo("Do you want to test this Monitor?", true);
         if (wantToTest) {
-            List<ServerWatcher> serverWatcherList = new ArrayList<>();
+            List<ServerAgent> serverAgentList = new ArrayList<>();
             ApiResult apiResult = apiConnector.postOperation("server_watchers", "get_watchers");
-            if (apiResult.isOk() && apiResult.getAnswer().optJSONArray("watchers").length() > 0) {
+            if (apiResult.isOk() && !apiResult.getAnswer().optJSONArray("watchers").isEmpty()) {
                 for (Object jsonObject : apiResult.getAnswer().optJSONArray("watchers")) {
                     if (jsonObject instanceof JSONObject) {
-                        serverWatcherList.add(ServerWatcher.fromJson((JSONObject) jsonObject));
+                        serverAgentList.add(ServerAgent.fromJson((JSONObject) jsonObject));
                     }
                 }
             }
-            ServerWatcher serverWatcher = null;
-            if (serverWatcherList.size() > 1) {
-                serverWatcher = (ServerWatcher) cmdLineInput.requestSelectable("Select watcher to connect to this monitor", serverWatcherList, userSettings.getServer().getDefaultServerWatcher());
+            ServerAgent serverAgent = null;
+            if (serverAgentList.size() > 1) {
+                serverAgent = (ServerAgent) cmdLineInput.requestSelectable("Select agent to connect to this monitor", serverAgentList, userSettings.getServer().getDefaultServerAgent());
             } else {
-                serverWatcher = serverWatcherList.get(0);
+                serverAgent = serverAgentList.get(0);
             }
-            if (serverWatcher != null) {
+            if (serverAgent != null) {
                 StartController startController = new StartController();
                 System.out.println("Starting Monitoring server...");
                 AtomicBoolean isOk = new AtomicBoolean(true);
@@ -154,7 +154,7 @@ public class RegistrationController {
                             try {
                                 startController.startFromConfiguration(userSettings.getConfiguration());
                             } catch (AesException e) {
-                                System.out.println("Can't init AES Encryption cipher. Possible bad AES-key");
+                                System.out.println("Can't init AES Encryption cipher. Possibly bad AES-key");
                                 isOk.set(false);
                             } catch (ServerBindException e) {
                                 System.out.println("Can't bind to " + userSettings.getPort() + ". Try to change port");
@@ -166,7 +166,7 @@ public class RegistrationController {
                         }
                 ).start();
                 boolean testPassed = false;
-                System.out.println("Waiting 3 secs");
+                System.out.println("Waiting 3 seconds");
                 if (isOk.get()) {
                     try {
                         Thread.sleep(3000);
@@ -177,7 +177,7 @@ public class RegistrationController {
                             "system_monitor",
                             "test_monitor",
                             new JSONObject()
-                                    .put("serverWatcher", serverWatcher.toJson())
+                                    .put("serverWatcher", serverAgent.toJson())
                                     .put("systemMonitor", userSettings.getSystemMonitor().toJson())
                                     .put("server", userSettings.getServer().toJson())
                     );
@@ -210,35 +210,35 @@ public class RegistrationController {
             userSettings.setName(cmdLineInput.requestString("Enter name", userSettings.getName().isEmpty() ? null : userSettings.getName()));
             System.out.println();
             System.out.println("Step #2: Select where you will bind that monitor");
-            System.out.println("* Note, that if you will select 127.0.0.1, you will not be able to connect to this Monitor without Watcher");
+            System.out.println("* Note that if you select 127.0.0.1, you will not be able to connect to this Monitor without an Agent");
             getBindInterface();
             System.out.println();
             System.out.println("Step #3: Select port for this Monitor");
-            System.out.println("* Note, that ports less than 1024 may require root privileges, so use port > 1024, if you can");
+            System.out.println("* Note that ports below 1024 may require root privileges, so use a port above 1024 if you can");
             userSettings.setPort(cmdLineInput.requestInt("Enter port (1 - 65535) ", userSettings.getPort() == 0 ? defaultPort : userSettings.getPort()));
             while (userSettings.getPort() < 1 || userSettings.getPort() > 65535) {
                 userSettings.setPort(cmdLineInput.requestInt("Enter port", userSettings.getPort() == 0 ? defaultPort : userSettings.getPort()));
             }
             System.out.println();
             System.out.println("Step #4: How we can reach this Monitor");
-            System.out.println("* Note, that if you doesn't have a real IP, or you are using 127.0.0.1, you need to configure Watcher first and provide here IP, that is reachable by Watcher");
+            System.out.println("* Note that if you don't have a real IP, or you are using 127.0.0.1, you need to configure Agent first and provide an IP that is reachable by Agent");
             setRemoteIp();
 
             System.out.println();
             System.out.println("Step #5: Enter passphrase for that Monitor");
-            System.out.println("* Note, that we need to encrypt data, that your server will send us. To do it, we are using AES encryption and let you to set passphrase for it");
+            System.out.println("* Note that we need to encrypt the data that your server sends us. To do it, we use AES encryption and let you set a passphrase for it");
             boolean keyIsGood = false;
             while (!keyIsGood) {
                 userSettings.setKey(cmdLineInput.requestString("Enter AES key", userSettings.getKey().isEmpty() ? UUID.randomUUID().toString() : userSettings.getKey()));
                 keyIsGood = userSettings.getKey().length() > 8;
                 if (!keyIsGood) {
-                    System.out.println("Key length can not be less than 8 symbols");
+                    System.out.println("Key length cannot be less than 8 characters");
                 }
             }
 
             System.out.println();
             System.out.println("Step #6: Disk space monitoring");
-            System.out.println("* Add disks, if you want to be informed by isMeUp about your disks free space ending");
+            System.out.println("* Add disks if you want isMeUp to inform you when your disks are running out of free space");
             printDisks();
             printSummary();
             yes = cmdLineInput.requestYesNo("Is above data right?", true);
@@ -252,14 +252,14 @@ public class RegistrationController {
         if (userSettings.getSelectedMonitor().getId() == 0) {
             System.out.println("You are going to create Monitor");
         } else {
-            System.out.println("You are going to configure existsing Monitor");
+            System.out.println("You are going to configure existing Monitor");
         }
         System.out.println("Name: " + userSettings.getName());
         System.out.println("Remote address: " + userSettings.getRemoteAddress());
         System.out.println("Bind port: " + userSettings.getPort());
         System.out.println("Bind address: " + userSettings.getBindTo());
         System.out.println("AES Encryption key: " + userSettings.getKey());
-        if (userSettings.getMountPoints().size() > 0) {
+        if (!userSettings.getMountPoints().isEmpty()) {
             System.out.println("Disks:");
             userSettings.getMountPoints().keySet().forEach(e -> {
                 System.out.println("    " + e + " : " + userSettings.getMountPoints().get(e));
@@ -279,11 +279,14 @@ public class RegistrationController {
         Server server = Server.empty();
         List<Server> serverList = new ArrayList<>();
         ApiResult apiResult = apiConnector.postOperation("servers", "get_servers");
-        if (apiResult.isOk() && !apiResult.isConnectionInterrupted() && apiResult.getAnswer().optJSONArray("servers").length() > 0) {
+        if (apiResult.isOk() && !apiResult.isConnectionInterrupted() && !apiResult.getAnswer().optJSONArray("servers").isEmpty()) {
             JSONArray jsonArray = apiResult.getAnswer().getJSONArray("servers");
             for (Object jsonObject : jsonArray) {
                 if (jsonObject instanceof JSONObject) {
-                    serverList.add(Server.fromJson((JSONObject) jsonObject));
+                    Server serverToAdd = Server.fromJson((JSONObject) jsonObject);
+                    if (!serverToAdd.isCategory()) {
+                        serverList.add(serverToAdd);
+                    }
                 }
             }
         }
@@ -344,8 +347,7 @@ public class RegistrationController {
         SystemMonitor newMonitor = SystemMonitor.empty();
         newMonitor.setName("<Create new monitor>");
         monitors.add(0, newMonitor);
-        SystemMonitor monitor = (SystemMonitor) cmdLineInput.requestSelectable("Select monitor", monitors);
-        return monitor;
+        return (SystemMonitor) cmdLineInput.requestSelectable("Select monitor", monitors);
     }
 
     private void setRemoteIp() {
@@ -354,7 +356,7 @@ public class RegistrationController {
             ApiResult apiResult = apiConnector.postOperation("remote_address", "get_ip");
             defaultIpAddress = apiResult.getAnswer().optString("ip", "");
         }
-        userSettings.setRemoteAddress(cmdLineInput.requestString("Remote IP address", defaultIpAddress.isEmpty() ? null : defaultIpAddress));
+        userSettings.setRemoteAddress(cmdLineInput.requestString("IP address for this monitor", defaultIpAddress.isEmpty() ? null : defaultIpAddress));
     }
 
     private void printDisks() {
@@ -400,7 +402,7 @@ public class RegistrationController {
             File file = new File(diskPath);
             freeSpace = file.getFreeSpace();
             if (freeSpace == 0) {
-                System.out.println("Disk does not exists");
+                System.out.println("Disk does not exist");
             }
         }
         String defaultName = getPathAlias(diskPath);
@@ -439,7 +441,6 @@ public class RegistrationController {
                         }
                         i++;
                     }
-                    userSettings.getMountPoints().keySet();
                 } catch (NumberFormatException e) {
 
                 }
@@ -469,11 +470,10 @@ public class RegistrationController {
                             File file = new File(diskPath);
                             freeSpace = file.getFreeSpace();
                             if (freeSpace == 0) {
-                                System.out.println("Disk does not exists");
+                                System.out.println("Disk does not exist");
                             }
                         }
-                        String defaultName = current;
-                        String diskAlias = cmdLineInput.requestString("Enter disk alias", defaultName);
+                        String diskAlias = cmdLineInput.requestString("Enter disk alias", current);
                         userSettings.getMountPoints().remove(current);
                         userSettings.getMountPoints().put(diskAlias, diskPath);
                         break;
@@ -511,9 +511,9 @@ public class RegistrationController {
                 }
             }
         } catch (FileNotFoundException e) {
-            System.out.println("Can't find file /etc/fstab. Please, add disk manually");
+            System.out.println("Can't find file /etc/fstab. Please add disk manually");
         } catch (IOException e) {
-            System.out.println("Can't read file /etc/fstab. Please, add disk manually");
+            System.out.println("Can't read file /etc/fstab. Please add disk manually");
         }
     }
 
