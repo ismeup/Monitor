@@ -8,8 +8,11 @@ import net.ismeup.apiclient.model.ApiConnectionData;
 
 import net.ismeup.apiclient.model.ApiResult;
 import net.ismeup.apiclient.model.LoginData;
+import net.ismeup.monitor.controller.Monitor;
 import net.ismeup.monitor.controller.StartController;
 import net.ismeup.monitor.exceptions.AesException;
+import net.ismeup.monitor.model.CustomCheck;
+import net.ismeup.monitor.model.CustomCheckType;
 import net.ismeup.monitor.exceptions.CantParseConfigFile;
 import net.ismeup.monitor.exceptions.CantReadConfigFile;
 import net.ismeup.monitor.model.Configuration;
@@ -240,6 +243,10 @@ public class RegistrationController {
             System.out.println("Step #6: Disk space monitoring");
             System.out.println("* Add disks if you want isMeUp to inform you when your disks are running out of free space");
             printDisks();
+            System.out.println();
+            System.out.println("Step #7: Custom checks");
+            System.out.println("* Add custom shell commands to monitor any boolean condition or numeric value");
+            printCustomChecks();
             printSummary();
             yes = cmdLineInput.requestYesNo("Is above data right?", true);
         }
@@ -266,6 +273,14 @@ public class RegistrationController {
             });
         } else {
             System.out.println("Disks not registered");
+        }
+        if (!userSettings.getCustomChecks().isEmpty()) {
+            System.out.println("Custom checks:");
+            for (CustomCheck check : userSettings.getCustomChecks()) {
+                System.out.println("    [" + check.getType().name().toLowerCase() + "] " + check.getName() + " : " + check.getCommand());
+            }
+        } else {
+            System.out.println("Custom checks not registered");
         }
         System.out.println();
         System.out.println("====== Configuration file (config.json) ======");
@@ -484,6 +499,118 @@ public class RegistrationController {
 
             }
         }
+    }
+
+    private void printCustomChecks() {
+        System.out.println("Configured custom checks:");
+        String operation = "";
+        while (!operation.equals("c")) {
+            int i = 0;
+            if (userSettings.getCustomChecks().isEmpty()) {
+                System.out.println("No custom checks added");
+            }
+            for (CustomCheck check : userSettings.getCustomChecks()) {
+                System.out.println("[" + i + "] [" + check.getType().name().toLowerCase() + "] " + check.getName() + " : " + check.getCommand());
+                i++;
+            }
+            System.out.println("Enter [a] to add check");
+            System.out.println("      [e] to edit check");
+            System.out.println("      [r] to remove check");
+            System.out.println("      [c] to continue");
+            operation = cmdLineInput.requestString("Select operation", "c");
+            switch (operation) {
+                case "a":
+                    addCustomCheck();
+                    break;
+                case "e":
+                    editCustomCheck();
+                    break;
+                case "r":
+                    removeCustomCheck();
+                    break;
+            }
+        }
+    }
+
+    private CustomCheckType requestCheckType(CustomCheckType defaultType) {
+        String defaultStr = defaultType == CustomCheckType.BOOLEAN ? "b" : "d";
+        System.out.println("      [b] boolean — exit code 0 = true, any other = false");
+        System.out.println("      [d] double  — first word of stdout parsed as number");
+        String typeStr = cmdLineInput.requestString("Enter check type", defaultStr);
+        return typeStr.equals("d") ? CustomCheckType.DOUBLE : CustomCheckType.BOOLEAN;
+    }
+
+    private void runAndPrintCheckResult(CustomCheckType type, String command) {
+        try {
+            Monitor monitor = new Monitor();
+            System.out.print("Running check... ");
+            if (type == CustomCheckType.BOOLEAN) {
+                boolean result = monitor.runBooleanCheck(command);
+                System.out.println("Result: " + result);
+            } else {
+                double result = monitor.runDoubleCheck(command);
+                System.out.println("Result: " + result);
+            }
+        } catch (Exception e) {
+            System.out.println("Failed to run check: " + e.getMessage());
+        }
+    }
+
+    private void addCustomCheck() {
+        String name = cmdLineInput.requestString("Enter check name");
+        CustomCheckType type = requestCheckType(CustomCheckType.BOOLEAN);
+        String command = cmdLineInput.requestString("Enter command");
+        runAndPrintCheckResult(type, command);
+        userSettings.getCustomChecks().add(CustomCheck.of(name, type, command));
+    }
+
+    private void editCustomCheck() {
+        if (userSettings.getCustomChecks().isEmpty()) {
+            return;
+        }
+        int value = -1;
+        while (value == -1) {
+            String indexStr = cmdLineInput.requestString("Enter check number to edit or [c] to cancel");
+            if (indexStr.equals("c")) {
+                return;
+            }
+            try {
+                int idx = Integer.parseInt(indexStr);
+                if (idx >= 0 && idx < userSettings.getCustomChecks().size()) {
+                    value = idx;
+                }
+            } catch (NumberFormatException e) {
+                // ignore
+            }
+        }
+        CustomCheck existing = userSettings.getCustomChecks().get(value);
+        String name = cmdLineInput.requestString("Enter check name", existing.getName());
+        CustomCheckType type = requestCheckType(existing.getType());
+        String command = cmdLineInput.requestString("Enter command", existing.getCommand());
+        runAndPrintCheckResult(type, command);
+        userSettings.getCustomChecks().set(value, CustomCheck.of(name, type, command));
+    }
+
+    private void removeCustomCheck() {
+        if (userSettings.getCustomChecks().isEmpty()) {
+            return;
+        }
+        int value = -1;
+        while (value == -1) {
+            String indexStr = cmdLineInput.requestString("Enter check number to remove or [c] to cancel");
+            if (indexStr.equals("c")) {
+                return;
+            }
+            try {
+                int idx = Integer.parseInt(indexStr);
+                if (idx >= 0 && idx < userSettings.getCustomChecks().size()) {
+                    value = idx;
+                }
+            } catch (NumberFormatException e) {
+                // ignore
+            }
+        }
+        userSettings.getCustomChecks().remove(value);
     }
 
     private void scanDisks() {

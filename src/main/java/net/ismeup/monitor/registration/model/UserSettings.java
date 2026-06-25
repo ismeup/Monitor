@@ -1,8 +1,11 @@
 package net.ismeup.monitor.registration.model;
 
 import net.ismeup.monitor.model.Configuration;
+import net.ismeup.monitor.model.CustomCheck;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -14,6 +17,7 @@ public class UserSettings {
     private String remoteAddress;
     private String key;
     private Map<String, String> mountPoints = new HashMap<>();
+    private List<CustomCheck> customChecks = new ArrayList<>();
     private Server server;
 
     public UserSettings(SystemMonitor monitor, Server server) {
@@ -36,6 +40,7 @@ public class UserSettings {
                 mountPoints.put(mountPointName, configuration.getMountPointByName(mountPointName));
             }
         }
+        customChecks = new ArrayList<>(configuration.getCustomChecks());
     }
 
     public SystemMonitor getSelectedMonitor() {
@@ -86,6 +91,10 @@ public class UserSettings {
         return mountPoints;
     }
 
+    public List<CustomCheck> getCustomChecks() {
+        return customChecks;
+    }
+
     public Server getServer() {
         return server;
     }
@@ -96,6 +105,7 @@ public class UserSettings {
         configuration.setBind(bindTo);
         configuration.setKey(key);
         configuration.setDisks(mountPoints);
+        configuration.setCustomChecks(customChecks);
         return configuration;
     }
 

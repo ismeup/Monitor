@@ -119,6 +119,14 @@ public class Configuration {
         jsonObject.put("bind", bind);
         jsonObject.put("port", port);
         jsonObject.put("mount_points", disksArray);
+        JSONArray checksArray = new JSONArray();
+        for (CustomCheck check : customChecks) {
+            checksArray.put(new JSONObject()
+                    .put("name", check.getName())
+                    .put("type", check.getType().name().toLowerCase())
+                    .put("command", check.getCommand()));
+        }
+        jsonObject.put("custom_checks", checksArray);
 
         return jsonObject;
     }
@@ -157,6 +165,10 @@ public class Configuration {
 
     public void setDisks(Map<String, String> disks) {
         this.disks = disks;
+    }
+
+    public void setCustomChecks(List<CustomCheck> customChecks) {
+        this.customChecks = customChecks;
     }
 
     public CustomCheck getCustomCheckByName(String name) {
