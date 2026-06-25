@@ -1,13 +1,18 @@
 package net.ismeup.monitor.controller;
 
+import net.ismeup.monitor.Main;
 import net.ismeup.monitor.model.Configuration;
+import net.ismeup.monitor.model.CustomCheck;
 import net.ismeup.monitor.exceptions.CantParseException;
 import net.ismeup.monitor.model.LoadAverageType;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import ru.webgrozny.simplehttpserver.ContentProvider;
 import ru.webgrozny.simplehttpserver.ServerStatus;
 
+import java.io.InputStream;
 import java.util.Base64;
+import java.util.Properties;
 import java.util.UUID;
 
 public class WebController extends ContentProvider  {
@@ -71,6 +76,42 @@ public class WebController extends ContentProvider  {
                     throw new CantParseException();
                 }
                 break;
+            case "custom":
+                try {
+                    String checkName = request.getString("name");
+                    CustomCheck check = configuration.getCustomCheckByName(checkName);
+                    if (check == null) {
+                        throw new CantParseException();
+                    }
+                    switch (check.getType()) {
+                        case BOOLEAN:
+                            answer = monitor.runBooleanCheck(check.getCommand()) + "";
+                            break;
+                        case DOUBLE:
+                            answer = monitor.runDoubleCheck(check.getCommand()) + "";
+                            break;
+                    }
+                } catch (CantParseException e) {
+                    throw e;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    throw new CantParseException();
+                }
+                break;
+            case "info":
+                JSONObject info = new JSONObject();
+                info.put("version", getVersion());
+                JSONArray disksArray = new JSONArray(configuration.getMountPoints());
+                info.put("disks", disksArray);
+                JSONArray checksArray = new JSONArray();
+                for (CustomCheck check : configuration.getCustomChecks()) {
+                    checksArray.put(new JSONObject()
+                            .put("name", check.getName())
+                            .put("type", check.getType().name().toLowerCase()));
+                }
+                info.put("custom_checks", checksArray);
+                answer = info.toString();
+                break;
             default:
                 throw new CantParseException();
         }
@@ -89,6 +130,19 @@ public class WebController extends ContentProvider  {
             throw new CantParseException();
         }
         return answer;
+    }
+
+    private String getVersion() {
+        try (InputStream is = Main.class.getResourceAsStream("/META-INF/maven/net.ismeup/Monitor/pom.properties")) {
+            if (is != null) {
+                Properties props = new Properties();
+                props.load(is);
+                return props.getProperty("version", "unknown");
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return "unknown";
     }
 
     private JSONObject decodeRequest(String request) throws CantParseException {

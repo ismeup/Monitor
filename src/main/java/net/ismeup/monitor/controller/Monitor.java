@@ -5,6 +5,7 @@ import oshi.SystemInfo;
 import oshi.hardware.HardwareAbstractionLayer;
 
 import java.io.*;
+import java.util.Scanner;
 
 public class Monitor {
 
@@ -48,5 +49,24 @@ public class Monitor {
         long freeRootBytes = file.getUsableSpace();
         double rootPercentUsed = 100d - 100d / ( (double) totalRootBytes / (double) freeRootBytes );
         return (int) Math.round(rootPercentUsed);
+    }
+
+    public boolean runBooleanCheck(String command) throws IOException, InterruptedException {
+        Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", command});
+        process.waitFor();
+        return process.exitValue() == 0;
+    }
+
+    public double runDoubleCheck(String command) throws IOException, InterruptedException {
+        Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", command});
+        process.waitFor();
+        try (Scanner scanner = new Scanner(process.getInputStream())) {
+            if (scanner.hasNext()) {
+                return Double.parseDouble(scanner.next());
+            }
+        } catch (NumberFormatException e) {
+            // fall through
+        }
+        return -1d;
     }
 }
