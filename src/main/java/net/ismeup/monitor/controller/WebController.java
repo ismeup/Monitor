@@ -85,10 +85,10 @@ public class WebController extends ContentProvider  {
                     }
                     switch (check.getType()) {
                         case BOOLEAN:
-                            answer = monitor.runBooleanCheck(check.getCommand()) + "";
+                            answer = monitor.runBooleanCheck(check) + "";
                             break;
                         case DOUBLE:
-                            answer = monitor.runDoubleCheck(check.getCommand()) + "";
+                            answer = monitor.runDoubleCheck(check) + "";
                             break;
                     }
                 } catch (CantParseException e) {

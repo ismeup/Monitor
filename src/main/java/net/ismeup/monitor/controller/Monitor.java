@@ -1,5 +1,6 @@
 package net.ismeup.monitor.controller;
 
+import net.ismeup.monitor.model.CustomCheck;
 import net.ismeup.monitor.model.LoadAverageType;
 import oshi.SystemInfo;
 import oshi.hardware.HardwareAbstractionLayer;
@@ -51,14 +52,14 @@ public class Monitor {
         return (int) Math.round(rootPercentUsed);
     }
 
-    public boolean runBooleanCheck(String command) throws IOException, InterruptedException {
-        Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", command});
+    public boolean runBooleanCheck(CustomCheck customCheck) throws IOException, InterruptedException {
+        Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", customCheck.getCommand()});
         process.waitFor();
         return process.exitValue() == 0;
     }
 
-    public double runDoubleCheck(String command) throws IOException, InterruptedException {
-        Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", command});
+    public double runDoubleCheck(CustomCheck customCheck) throws IOException, InterruptedException {
+        Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", customCheck.getCommand()});
         process.waitFor();
         try (Scanner scanner = new Scanner(process.getInputStream())) {
             if (scanner.hasNext()) {

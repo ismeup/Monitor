@@ -544,11 +544,12 @@ public class RegistrationController {
         try {
             Monitor monitor = new Monitor();
             System.out.print("Running check... ");
+            CustomCheck customCheck = CustomCheck.of("test", type, command);
             if (type == CustomCheckType.BOOLEAN) {
-                boolean result = monitor.runBooleanCheck(command);
+                boolean result = monitor.runBooleanCheck(customCheck);
                 System.out.println("Result: " + result);
             } else {
-                double result = monitor.runDoubleCheck(command);
+                double result = monitor.runDoubleCheck(customCheck);
                 System.out.println("Result: " + result);
             }
         } catch (Exception e) {

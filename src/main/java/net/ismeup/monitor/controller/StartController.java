@@ -56,9 +56,9 @@ public class StartController {
             for (CustomCheck check : configuration.getCustomChecks()) {
                 try {
                     if (check.getType() == CustomCheckType.BOOLEAN) {
-                        System.out.println("\t[boolean] " + check.getName() + ": " + monitor.runBooleanCheck(check.getCommand()));
+                        System.out.println("\t[boolean] " + check.getName() + ": " + monitor.runBooleanCheck(check));
                     } else {
-                        System.out.println("\t[double] " + check.getName() + ": " + monitor.runDoubleCheck(check.getCommand()));
+                        System.out.println("\t[double] " + check.getName() + ": " + monitor.runDoubleCheck(check));
                     }
                 } catch (Exception e) {
                     System.out.println("\t" + check.getName() + ": failed (" + e.getMessage() + ")");
