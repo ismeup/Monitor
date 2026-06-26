@@ -40,6 +40,9 @@ info "Latest version: ${BOLD}${VERSION}${NC}"
 
 JAR_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/Monitor-${VERSION}-jar-with-dependencies.jar"
 
+# Reconnect stdin to the terminal — required when script is piped through curl
+exec < /dev/tty
+
 # ── Update mode: existing installation detected ─────────────────────────────
 if [[ -f "${INSTALL_DIR}/${JAR_NAME}" ]]; then
     warn "Existing installation found in ${INSTALL_DIR}"
