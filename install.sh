@@ -40,14 +40,11 @@ info "Latest version: ${BOLD}${VERSION}${NC}"
 
 JAR_URL="https://github.com/${GITHUB_REPO}/releases/download/v${VERSION}/Monitor-${VERSION}-jar-with-dependencies.jar"
 
-# Reconnect stdin to the terminal — required when script is piped through curl
-exec < /dev/tty
-
 # ── Update mode: existing installation detected ─────────────────────────────
 if [[ -f "${INSTALL_DIR}/${JAR_NAME}" ]]; then
     warn "Existing installation found in ${INSTALL_DIR}"
     ask "Update JAR to v${VERSION}? config.json will not be touched [Y/n]: "
-    read -r ans
+    read -r ans </dev/tty
     [[ "${ans,,}" == "n" ]] && { info "Nothing changed. Exiting."; exit 0; }
 
     info "Downloading Monitor v${VERSION}..."
@@ -83,7 +80,7 @@ echo ""
 info "Starting configuration wizard..."
 echo "-------------------------------------------"
 cd "$WORKDIR"
-java -jar "$JAR_NAME" --setup
+java -jar "$JAR_NAME" --setup </dev/tty
 echo "-------------------------------------------"
 
 [[ -f "${WORKDIR}/config.json" ]] \
@@ -99,7 +96,7 @@ ok "Installed to ${INSTALL_DIR}"
 # ── Systemd ──────────────────────────────────────────────────────────────────
 echo ""
 ask "Install as systemd service? [Y/n]: "
-read -r ans_service
+read -r ans_service </dev/tty
 if [[ "${ans_service,,}" == "n" ]]; then
     ok "Done. Start manually with:"
     echo "    java -jar ${INSTALL_DIR}/${JAR_NAME}"
@@ -107,7 +104,7 @@ if [[ "${ans_service,,}" == "n" ]]; then
 fi
 
 ask "Run service as user [ismeup]: "
-read -r SVC_USER
+read -r SVC_USER </dev/tty
 SVC_USER="${SVC_USER:-ismeup}"
 
 if ! id "$SVC_USER" &>/dev/null; then
