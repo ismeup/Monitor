@@ -115,7 +115,7 @@ public class RegistrationController {
     private void saveConfigurationFile() {
         try {
             FileOutputStream fileOutputStream = new FileOutputStream(userSettings.getConfiguration().configFilePath());
-            fileOutputStream.write(userSettings.getConfiguration().getJson().toString().getBytes());
+            fileOutputStream.write(userSettings.getConfiguration().getJson().toString(4).getBytes());
             fileOutputStream.close();
             System.out.println("Configuration file saved. Now you can run this monitor as usual");
         } catch (Exception e) {
@@ -285,7 +285,7 @@ public class RegistrationController {
         System.out.println();
         System.out.println("====== Configuration file (config.json) ======");
         System.out.println();
-        System.out.println(userSettings.getConfiguration().getJson().toString());
+        System.out.println(userSettings.getConfiguration().getJson().toString(4));
         System.out.println();
 
     }
