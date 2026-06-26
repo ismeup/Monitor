@@ -11,5 +11,17 @@
             "name" : "home",
             "path" : "/home"
         }
+    ],
+    "custom_checks" : [
+        {
+            "name" : "nginx_running",
+            "type" : "boolean",
+            "command" : "systemctl is-active --quiet nginx"
+        },
+        {
+            "name" : "cpu_temp",
+            "type" : "double",
+            "command" : "cat /sys/class/thermal/thermal_zone0/temp"
+        }
     ]
 }

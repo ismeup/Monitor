@@ -4,6 +4,8 @@ import net.ismeup.monitor.exceptions.AesException;
 import net.ismeup.monitor.exceptions.CantParseConfigFile;
 import net.ismeup.monitor.exceptions.CantReadConfigFile;
 import net.ismeup.monitor.model.Configuration;
+import net.ismeup.monitor.model.CustomCheck;
+import net.ismeup.monitor.model.CustomCheckType;
 import net.ismeup.monitor.model.LoadAverageType;
 import ru.webgrozny.simplehttpserver.Server;
 import ru.webgrozny.simplehttpserver.ServerSettings;
@@ -49,6 +51,20 @@ public class StartController {
         configuration.getMountPoints().forEach( (String disk) -> {
             System.out.println("\t" + disk + ": " + monitor.getDiskFreeSpace(configuration.getMountPointByName(disk)) + "%");
         } );
+        if (!configuration.getCustomChecks().isEmpty()) {
+            System.out.println("Custom checks");
+            for (CustomCheck check : configuration.getCustomChecks()) {
+                try {
+                    if (check.getType() == CustomCheckType.BOOLEAN) {
+                        System.out.println("\t[boolean] " + check.getName() + ": " + monitor.runBooleanCheck(check));
+                    } else {
+                        System.out.println("\t[double] " + check.getName() + ": " + monitor.runDoubleCheck(check));
+                    }
+                } catch (Exception e) {
+                    System.out.println("\t" + check.getName() + ": failed (" + e.getMessage() + ")");
+                }
+            }
+        }
         System.out.println("Starting monitoring daemon at " + configuration.getBind() + ":" + configuration.getPort());
         AesController aesController = new AesController(configuration.getKey());
         ServerSettings serverSettings = ServerSettings

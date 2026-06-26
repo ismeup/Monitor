@@ -5,6 +5,17 @@ To use it, you need to register new Monitor in your client area and provide conf
 (look for Configuring and running section).
 
 
+## Quick install
+
+    curl -fsSL https://raw.githubusercontent.com/ismeup/Monitor/main/install.sh | bash
+
+The script will:
+1. Download the latest release from GitHub
+2. Run the interactive configuration wizard (`--setup`)
+3. Optionally install Monitor as a systemd service under a dedicated user
+
+Requires Java 8+ and `curl`. For the systemd service option, `sudo` access is needed.
+
 ## Compiling
 The best way to compile executable jar-file is Maven:
 

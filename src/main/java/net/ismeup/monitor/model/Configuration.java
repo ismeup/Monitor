@@ -11,7 +11,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -20,6 +22,7 @@ public class Configuration {
     private int port;
     private String bind;
     private Map<String, String> disks;
+    private List<CustomCheck> customChecks;
 
     public static Configuration empty() {
         Configuration configuration = new Configuration();
@@ -27,6 +30,7 @@ public class Configuration {
         configuration.port = 0;
         configuration.bind = "";
         configuration.disks = new HashMap<>();
+        configuration.customChecks = new ArrayList<>();
         return configuration;
     }
 
@@ -84,6 +88,22 @@ public class Configuration {
                     }
                 }
             }
+            customChecks = new ArrayList<>();
+            JSONArray customChecksArray = jsonObject.optJSONArray("custom_checks");
+            if (customChecksArray != null) {
+                for (Object checkObject : customChecksArray) {
+                    if (checkObject instanceof JSONObject) {
+                        JSONObject checkJson = (JSONObject) checkObject;
+                        String name = checkJson.getString("name");
+                        String command = checkJson.getString("command");
+                        String typeStr = checkJson.getString("type").toUpperCase();
+                        CustomCheckType type = CustomCheckType.valueOf(typeStr);
+                        customChecks.add(CustomCheck.of(name, type, command));
+                    } else {
+                        throw new CantParseConfigFile();
+                    }
+                }
+            }
         } catch (Exception e) {
             throw new CantParseConfigFile();
         }
@@ -99,6 +119,14 @@ public class Configuration {
         jsonObject.put("bind", bind);
         jsonObject.put("port", port);
         jsonObject.put("mount_points", disksArray);
+        JSONArray checksArray = new JSONArray();
+        for (CustomCheck check : customChecks) {
+            checksArray.put(new JSONObject()
+                    .put("name", check.getName())
+                    .put("type", check.getType().name().toLowerCase())
+                    .put("command", check.getCommand()));
+        }
+        jsonObject.put("custom_checks", checksArray);
 
         return jsonObject;
     }
@@ -137,5 +165,22 @@ public class Configuration {
 
     public void setDisks(Map<String, String> disks) {
         this.disks = disks;
+    }
+
+    public void setCustomChecks(List<CustomCheck> customChecks) {
+        this.customChecks = customChecks;
+    }
+
+    public CustomCheck getCustomCheckByName(String name) {
+        for (CustomCheck check : customChecks) {
+            if (check.getName().equals(name)) {
+                return check;
+            }
+        }
+        return null;
+    }
+
+    public List<CustomCheck> getCustomChecks() {
+        return customChecks;
     }
 }
